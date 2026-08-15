@@ -1,0 +1,65 @@
+#!/bin/sh
+# Print the top processes by *instantaneous* CPU share, as TSV:
+#
+#   pid<TAB>name<TAB>cpu-percent<TAB>rss-kb
+#
+# `ps -eo %cpu` reports the average over a process's whole lifetime, which
+# ranks a process that hammered the CPU an hour ago above one busy right now.
+# So this samples /proc/<pid>/stat twice and diffs the jiffy counters, the
+# same thing top and htop do. Percentages are relative to one core, so a
+# multi-threaded process can exceed 100%.
+#
+# Only ever runs while the panel is open — the bar widget itself spawns
+# nothing. Needs nothing beyond a POSIX shell, awk and coreutils.
+#
+# usage: stats-top [count] [window-seconds]
+
+# Deliberately not `set -e`: pids vanish between the glob and the open, which
+# makes awk exit non-zero even though the sample it produced is fine.
+set -u
+
+count=${1:-5}
+window=${2:-0.4}
+hz=$(getconf CLK_TCK 2>/dev/null || echo 100)
+pagesize=$(getconf PAGESIZE 2>/dev/null || echo 4096)
+
+sample() {
+  awk -v OFS='\t' '
+    {
+      # comm sits in parens and may itself contain spaces or parens, so the
+      # fixed-width fields start after the *last* ")" in the record.
+      close_paren = 0
+      for (i = length($0); i > 0; i--)
+        if (substr($0, i, 1) == ")") { close_paren = i; break }
+      open_paren = index($0, "(")
+      if (close_paren == 0 || open_paren == 0 || close_paren <= open_paren) next
+
+      name = substr($0, open_paren + 1, close_paren - open_paren - 1)
+      split(substr($0, close_paren + 2), f, " ")
+
+      # f[12] utime, f[13] stime, f[22] rss in pages (fields 14, 15 and 24 of
+      # the record, offset by the two that precede the state field).
+      split(FILENAME, path, "/")
+      print path[3], name, f[12] + f[13], f[22]
+    }
+  ' /proc/[0-9]*/stat 2>/dev/null
+}
+
+{
+  sample
+  echo "==="
+  sleep "$window"
+  sample
+} | awk -F '\t' -v OFS='\t' -v hz="$hz" -v win="$window" -v pagesize="$pagesize" '
+  /^===$/ { second = 1; next }
+  !second { jiffies[$1] = $3; next }
+  {
+    if (!($1 in jiffies)) next          # started mid-window, no baseline
+    delta = $3 - jiffies[$1]
+    if (delta < 0) delta = 0
+    printf "%s\t%s\t%.1f\t%d\n", $1, $2, 100 * delta / (hz * win), $4 * pagesize / 1024
+  }
+' | sort -t "$(printf '\t')" -k3,3gr -k4,4nr | head -n "$count"
+# Ties on CPU are broken by resident memory: on an idle machine the tail of
+# the list would otherwise be whichever kernel threads sorted first, which
+# tells you nothing.

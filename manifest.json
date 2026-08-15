@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "id": "flohessling.stats",
+  "name": "System Stats",
+  "version": "0.1.0",
+  "author": "Florian Hessling",
+  "license": "MIT",
+  "description": "CPU and memory usage in the bar, read straight from procfs, with a detail panel for per-core load, memory, swap, load average and the busiest processes.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Stats",
+    "description": "CPU and memory usage with sparklines, and a panel with per-core load, memory, swap, load average and top processes.",
+    "category": "System",
+    "aliases": ["cpu", "memory", "ram", "load", "stats", "monitor"],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "intervalMs": 2000,
+      "panelIntervalMs": 1000,
+      "sparklines": true,
+      "cores": true,
+      "topProcesses": 5,
+      "alertPercent": 90,
+      "cpuIcon": "",
+      "memoryIcon": "",
+      "clickCommand": "omarchy-launch-or-focus-tui btop"
+    },
+    "schema": [
+      {
+        "key": "intervalMs",
+        "type": "integer",
+        "label": "Sample interval (ms)",
+        "min": 500,
+        "max": 10000,
+        "step": 500,
+        "defaultValue": 2000,
+        "description": "How often the bar readout samples /proc. This is also the averaging window for the CPU percentage."
+      },
+      {
+        "key": "panelIntervalMs",
+        "type": "integer",
+        "label": "Panel sample interval (ms)",
+        "min": 500,
+        "max": 5000,
+        "step": 500,
+        "defaultValue": 1000,
+        "description": "Faster sampling while the panel is open."
+      },
+      {
+        "key": "sparklines",
+        "type": "boolean",
+        "label": "Show sparklines in the bar",
+        "defaultValue": true
+      },
+      {
+        "key": "cores",
+        "type": "boolean",
+        "label": "Show per-core load in the panel",
+        "defaultValue": true
+      },
+      {
+        "key": "topProcesses",
+        "type": "integer",
+        "label": "Top processes in the panel",
+        "min": 0,
+        "max": 15,
+        "step": 1,
+        "defaultValue": 5,
+        "description": "Set to 0 to drop the process list, which is the only thing in this plugin that runs a subprocess."
+      },
+      {
+        "key": "alertPercent",
+        "type": "integer",
+        "label": "Alert threshold (%)",
+        "min": 50,
+        "max": 100,
+        "step": 5,
+        "defaultValue": 90,
+        "description": "Usage at or above this turns the readout the theme's urgent color."
+      },
+      {
+        "key": "cpuIcon",
+        "type": "string",
+        "label": "CPU glyph",
+        "defaultValue": ""
+      },
+      {
+        "key": "memoryIcon",
+        "type": "string",
+        "label": "Memory glyph",
+        "defaultValue": ""
+      },
+      {
+        "key": "clickCommand",
+        "type": "string",
+        "label": "Right-click command",
+        "defaultValue": "omarchy-launch-or-focus-tui btop",
+        "description": "Run on right-click. Leave empty to disable."
+      }
+    ]
+  }
+}
