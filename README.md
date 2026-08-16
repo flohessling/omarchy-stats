@@ -52,7 +52,9 @@ Per-instance, in the widget's entry in `~/.config/omarchy/shell.json`:
 | `sparklines` | `true` | History strips next to the bar percentages |
 | `cores` | `true` | Per-core meters in the panel |
 | `topProcesses` | `5` | Rows in the process list; `0` removes it entirely |
-| `alertPercent` | `90` | Usage at or above this turns the readout the theme's urgent color |
+| `alertPercent` | `90` | Usage at or above this switches the readout and its chart to the alert color |
+| `chartColor` | *theme, else `accent`* | Theme token for sparklines and core meters below the threshold |
+| `chartAlertColor` | *theme, else `urgent`* | Theme token for sparklines at or above it |
 | `cpuIcon` / `memoryIcon` | `` / `` | Glyphs, for fonts that lack these |
 | `clickCommand` | `omarchy-launch-or-focus-tui btop` | Run on right-click and from the panel header; empty hides the header button |
 
@@ -63,8 +65,42 @@ Per-instance, in the widget's entry in `~/.config/omarchy/shell.json`:
 The header button labels itself from the command it runs — point
 `clickCommand` at `htop` and its tooltip reads "Open htop".
 
-Colors come from the active Omarchy theme — accent for the charts, urgent
-above the alert threshold — so it follows `omarchy theme set`.
+## Colors
+
+Nothing is hardcoded: every color is a *token* resolved against the active
+theme, so the widget follows `omarchy theme set` without configuration.
+
+Chart colors resolve in three steps, and you normally touch none of them:
+
+1. `chartColor` / `chartAlertColor` on the widget, if set
+2. a `[stats]` section published by the active theme
+3. `accent` and `urgent`, which every theme has
+
+### Themes: publishing your own chart colors
+
+Step 2 exists because Quattro's palette has no green. `red` / `color1` from
+`colors.toml` becomes `urgent`, but `color2` never gets a semantic name, so a
+theme's green is unreachable by any standard role.
+
+`omarchy-theme-set-templates` globs every `shell.*.toml` in a theme directory
+and appends the section when the generated `shell.toml` has no block by that
+name — so a theme can ship a `shell.stats.toml` and have it picked up with no
+configuration on the user's side:
+
+```toml
+# shell.stats.toml — becomes [stats] in the generated shell.toml
+chart       = "#8DAA9A"
+chart-alert = "#b46958"
+```
+
+Both accept the same forms as the settings: a palette role (`accent`,
+`urgent`, `muted`, `foreground`), another `shell.toml` key such as
+`hyprland.active-border`, or a literal `#rrggbb`. Everything re-resolves on
+`omarchy theme set`, so nothing needs restarting.
+
+Per-core meters alert on their own load against the same threshold, so a
+couple of saturated cores show up red while the aggregate chart is still
+calm — which is exactly what a parallel build looks like.
 
 ## What the numbers mean
 

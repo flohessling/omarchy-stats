@@ -16,7 +16,14 @@
     "displayName": "Stats",
     "description": "CPU and memory usage with sparklines, and a panel with per-core load, memory, swap, load average and top processes.",
     "category": "System",
-    "aliases": ["cpu", "memory", "ram", "load", "stats", "monitor"],
+    "aliases": [
+      "cpu",
+      "memory",
+      "ram",
+      "load",
+      "stats",
+      "monitor"
+    ],
     "allowMultiple": false,
     "defaultSection": "right",
     "defaults": {
@@ -81,7 +88,21 @@
         "max": 100,
         "step": 5,
         "defaultValue": 90,
-        "description": "Usage at or above this turns the readout the theme's urgent color."
+        "description": "Usage at or above this turns the readout and its chart the alert color."
+      },
+      {
+        "key": "chartColor",
+        "type": "string",
+        "label": "Chart color",
+        "defaultValue": "",
+        "description": "Theme token for sparklines and core meters below the alert threshold: a role name (accent, urgent, muted, foreground), any shell.toml key such as hyprland.active-border, or a hex value. Leave empty to use the theme's [stats] chart key, falling back to accent."
+      },
+      {
+        "key": "chartAlertColor",
+        "type": "string",
+        "label": "Chart alert color",
+        "defaultValue": "",
+        "description": "Theme token for sparklines at or above the alert threshold. Leave empty to use the theme's [stats] chart-alert key, falling back to urgent."
       },
       {
         "key": "cpuIcon",

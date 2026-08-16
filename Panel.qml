@@ -20,6 +20,8 @@ Panel {
   readonly property bool showSparklines: setting("sparklines", true)
   readonly property int topProcessCount: Math.max(0, setting("topProcesses", 5))
   readonly property int alertPercent: setting("alertPercent", 90)
+  readonly property string chartColorToken: setting("chartColor", Color.pick("stats.chart", "accent"))
+  readonly property string chartAlertColorToken: setting("chartAlertColor", Color.pick("stats.chart-alert", "urgent"))
   readonly property bool showCores: setting("cores", true)
   readonly property string cpuIcon: setting("cpuIcon", "")
   readonly property string memoryIcon: setting("memoryIcon", "")
@@ -33,6 +35,24 @@ Panel {
   readonly property color urgent: bar ? bar.urgent : Color.urgent
   readonly property color dim: Qt.darker(panelText, 1.55)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
+
+  // Chart colors are theme *token references*, not literals, resolved in three
+  // steps: an explicit per-instance setting, else a `[stats]` section the theme
+  // published in its own shell.*.toml, else accent/urgent, which every theme
+  // has. Color.flatColor then accepts a role name ("accent", "urgent"), any
+  // shell.toml key ("hyprland.active-border"), or a plain hex — and re-resolves
+  // on theme switch, because both it and Color.pick read Color.shellValues.
+  //
+  // The theme step matters because Quattro's palette has no green: colors.toml
+  // `red`/`color1` becomes Color.urgent, but `color2` never gets a semantic
+  // name. Letting the theme name its own chart colors keeps that decision where
+  // the rest of the palette lives, instead of in every user's shell.json.
+  readonly property color chartColor: Color.flatColor(chartColorToken, Color.accent)
+  readonly property color chartAlertColor: Color.flatColor(chartAlertColorToken, Color.urgent)
+
+  function chartColorFor(fraction) {
+    return fraction * 100 >= alertPercent ? chartAlertColor : chartColor
+  }
 
   property var topProcesses: []
 
@@ -137,7 +157,7 @@ Panel {
         showSparkline: root.showSparklines && !root.vertical
         fontFamily: root.fontFamily
         textColor: root.alertColor(stats.cpuFraction, root.foreground)
-        accentColor: root.accent
+        accentColor: root.chartColorFor(stats.cpuFraction)
       }
 
       BarMetric {
@@ -147,7 +167,7 @@ Panel {
         showSparkline: root.showSparklines && !root.vertical
         fontFamily: root.fontFamily
         textColor: root.alertColor(stats.memFraction, root.foreground)
-        accentColor: root.accent
+        accentColor: root.chartColorFor(stats.memFraction)
       }
     }
   }
@@ -229,7 +249,7 @@ Panel {
           fontFamily: root.fontFamily
           textColor: root.panelText
           dimColor: root.dim
-          lineColor: root.alertColor(stats.cpuFraction, root.accent)
+          lineColor: root.chartColorFor(stats.cpuFraction)
         }
 
         // Per-core load. A column per core reads as one shape, so an
@@ -262,9 +282,10 @@ Panel {
                 anchors.bottom: parent.bottom
                 height: Math.max(1, parent.height * Math.max(0, Math.min(1, modelData)))
                 radius: parent.radius
-                // Deliberately not the alert color: one pinned core is what a
-                // build looks like, not a problem. Only the aggregate warns.
-                color: root.accent
+                // Each core alerts on its own load, against the same threshold
+                // as the aggregate — a saturated core is worth seeing even when
+                // the average across 16 of them stays calm.
+                color: root.chartColorFor(modelData)
 
                 Behavior on height {
                   NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
@@ -287,7 +308,7 @@ Panel {
           fontFamily: root.fontFamily
           textColor: root.panelText
           dimColor: root.dim
-          lineColor: root.alertColor(stats.memFraction, root.accent)
+          lineColor: root.chartColorFor(stats.memFraction)
         }
 
         // Facts that do not deserve a chart.
