@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "author": "Florian Hessling",
   "license": "MIT",
-  "description": "CPU and memory usage in the bar, read straight from procfs, with a detail panel for per-core load, memory, swap, load average and the busiest processes.",
+  "description": "CPU and memory usage in the bar, read straight from procfs, with a detail panel for per-core load, CPU temperature, memory, swap, load average and the busiest processes.",
   "kinds": [
     "bar-widget"
   ],
@@ -14,7 +14,7 @@
   },
   "barWidget": {
     "displayName": "Stats",
-    "description": "CPU and memory usage with sparklines, and a panel with per-core load, memory, swap, load average and top processes.",
+    "description": "CPU and memory usage with sparklines, and a panel with per-core load, temperature, memory, swap, load average and top processes.",
     "category": "System",
     "aliases": [
       "cpu",
@@ -35,7 +35,9 @@
       "alertPercent": 90,
       "cpuIcon": "",
       "memoryIcon": "",
-      "clickCommand": "omarchy-launch-or-focus-tui btop"
+      "clickCommand": "omarchy-launch-or-focus-tui btop",
+      "temperature": true,
+      "tempAlertCelsius": 85
     },
     "schema": [
       {
@@ -69,6 +71,23 @@
         "type": "boolean",
         "label": "Show per-core load in the panel",
         "defaultValue": true
+      },
+      {
+        "key": "temperature",
+        "type": "boolean",
+        "label": "Show CPU temperature",
+        "defaultValue": true,
+        "description": "Package temperature under the CPU heading. Hidden automatically when no CPU sensor is present."
+      },
+      {
+        "key": "tempAlertCelsius",
+        "type": "integer",
+        "label": "Temperature alert (°C)",
+        "min": 50,
+        "max": 110,
+        "step": 5,
+        "defaultValue": 85,
+        "description": "Package temperature at or above this turns the reading the theme's urgent color."
       },
       {
         "key": "topProcesses",

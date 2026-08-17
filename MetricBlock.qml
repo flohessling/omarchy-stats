@@ -15,6 +15,9 @@ Column {
   property string fontFamily: Style.font.family
   property color textColor: Color.foreground
   property color dimColor: Qt.darker(textColor, 1.55)
+  // Separate from dimColor so a detail line can carry its own state — the CPU
+  // block uses it to warn on temperature, which has nothing to do with usage.
+  property color detailColor: dimColor
   property color lineColor: Color.accent
   property real chartHeight: Style.space(34)
 
@@ -51,7 +54,7 @@ Column {
   Text {
     visible: root.detail !== ""
     text: root.detail
-    color: root.dimColor
+    color: root.detailColor
     font.family: root.fontFamily
     font.pixelSize: Style.font.bodySmall
     renderType: Text.NativeRendering

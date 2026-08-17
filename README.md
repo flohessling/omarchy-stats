@@ -8,7 +8,7 @@ panel on click. Built for Omarchy 4 ("Quattro") and its Quickshell bar.
 Clicking either readout opens a panel:
 
 - a **header** naming the machine's CPU, with a shortcut to `btop`
-- **CPU** — usage, history, and one meter per core
+- **CPU** — usage, package temperature, history, and one meter per core
 - **MEMORY** — usage, history, used against total
 - **swap, load average and uptime**
 - **top processes**, by instantaneous CPU
@@ -51,6 +51,8 @@ Per-instance, in the widget's entry in `~/.config/omarchy/shell.json`:
 | `panelIntervalMs` | `1000` | Sampling period while the panel is open |
 | `sparklines` | `true` | History strips next to the bar percentages |
 | `cores` | `true` | Per-core meters in the panel |
+| `temperature` | `true` | Package temperature under the CPU heading |
+| `tempAlertCelsius` | `85` | Temperature at or above this turns the reading urgent |
 | `topProcesses` | `5` | Rows in the process list; `0` removes it entirely |
 | `alertPercent` | `90` | Usage at or above this switches the readout and its chart to the alert color |
 | `chartColor` | *theme, else `accent`* | Theme token for sparklines and core meters below the threshold |
@@ -107,6 +109,14 @@ calm — which is exactly what a parallel build looks like.
 **CPU** is the busy share of all cores over the last interval, from the jiffy
 counters in `/proc/stat`; `idle` and `iowait` both count as idle. Per-core
 meters are the same calculation per `cpuN` line.
+
+**Temperature** is the CPU package sensor, found by *name* rather than path:
+`hwmon` numbering follows driver probe order, so today's `hwmon6` can be
+something else after a reboot. The directories under `/sys/class/hwmon` are
+enumerated and the best-ranked CPU driver wins — `coretemp` (Intel), then
+`k10temp` / `zenpower` (AMD), then `cpu_thermal` (ARM), with `acpitz` as a last
+resort. Machines with no CPU sensor, which includes most VMs, simply omit the
+line. No `lm_sensors`, no subprocess.
 
 **Memory** is `MemTotal - MemAvailable`, the kernel's own estimate of what is
 actually unavailable. It is deliberately not `MemFree`, which counts the page

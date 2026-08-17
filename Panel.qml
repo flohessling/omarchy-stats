@@ -23,6 +23,8 @@ Panel {
   readonly property string chartColorToken: setting("chartColor", Color.pick("stats.chart", "accent"))
   readonly property string chartAlertColorToken: setting("chartAlertColor", Color.pick("stats.chart-alert", "urgent"))
   readonly property bool showCores: setting("cores", true)
+  readonly property bool showTemperature: setting("temperature", true)
+  readonly property int tempAlertCelsius: setting("tempAlertCelsius", 85)
   readonly property string cpuIcon: setting("cpuIcon", "")
   readonly property string memoryIcon: setting("memoryIcon", "")
   readonly property string clickCommand: setting("clickCommand", "omarchy-launch-or-focus-tui btop")
@@ -241,8 +243,12 @@ Panel {
           width: parent.width
           title: "CPU"
           icon: root.cpuIcon
-          // Core count lives in the hero now; repeating it here is noise.
-          detail: ""
+          // Core count lives in the hero; this slot carries the package
+          // temperature instead, blank when no sensor was found.
+          detail: root.showTemperature && stats.cpuTemp > 0
+            ? Math.round(stats.cpuTemp) + " °C"
+            : ""
+          detailColor: stats.cpuTemp >= root.tempAlertCelsius ? root.urgent : root.dim
           fraction: stats.cpuFraction
           value: stats.primed ? root.pct(stats.cpuFraction) : "--%"
           history: stats.cpuHistory

@@ -1,4 +1,5 @@
 import QtQuick
+import Qt.labs.folderlistmodel
 import Quickshell.Io
 
 // Reads CPU and memory usage straight out of procfs. No subprocesses, no
@@ -39,6 +40,7 @@ Item {
   property bool primed: false         // false until the first CPU delta exists
   property string cpuModel: ""        // read once; the CPU does not change
   property real uptimeSeconds: 0
+  property real cpuTemp: 0            // °C, 0 when no CPU sensor was found
 
   readonly property int coreCount: cpuCores.length
 
@@ -164,6 +166,73 @@ Item {
     }
   }
 
+  // ------------------------------------------------------ CPU temperature
+  //
+  // hwmon numbering follows driver probe order, so /sys/class/hwmon/hwmon6 is
+  // coretemp on this boot and could be anything on the next. The sensor has to
+  // be found by *name*: enumerate the directories, read each `name`, and keep
+  // the best-ranked CPU driver. Ranking rather than first-match makes the
+  // choice independent of scan order.
+  //
+  // Machines with no CPU sensor at all (most VMs) simply leave cpuTemp at 0,
+  // and the panel omits the line.
+  readonly property var _sensorRanks: ({
+    "coretemp": 0,      // Intel
+    "k10temp": 1,       // AMD (Zen and later)
+    "zenpower": 2,      // AMD, out-of-tree driver
+    "cpu_thermal": 3,   // ARM SoCs
+    "cpu-thermal": 4,
+    "acpitz": 5         // last resort: ACPI thermal zone, often the chassis
+  })
+
+  property string tempPath: ""
+  property int _tempRank: 99
+
+  function _considerSensor(dirPath, name) {
+    var key = String(name).replace(/^\s+|\s+$/g, "")
+    if (!(key in _sensorRanks)) return
+    var rank = _sensorRanks[key]
+    if (rank >= _tempRank) return
+    _tempRank = rank
+    tempPath = dirPath + "/temp1_input"
+  }
+
+  function _parseTemp(text) {
+    // millidegrees Celsius
+    var milli = Number(String(text).replace(/^\s+|\s+$/g, ""))
+    cpuTemp = isFinite(milli) && milli > 0 ? milli / 1000 : 0
+  }
+
+  FolderListModel {
+    id: hwmonDirs
+    folder: "file:///sys/class/hwmon"
+    showDirs: true
+    showFiles: false
+    showDotAndDotDot: false
+    sortField: FolderListModel.Name
+  }
+
+  // One FileView per hwmon directory, alive only long enough to read its name.
+  Instantiator {
+    model: hwmonDirs
+    delegate: FileView {
+      required property string filePath
+      path: filePath + "/name"
+      blockLoading: true
+      printErrors: false
+      onLoaded: root._considerSensor(filePath, text())
+    }
+  }
+
+  FileView {
+    id: tempFile
+    path: root.tempPath
+    blockLoading: true
+    printErrors: false
+    onLoaded: root._parseTemp(text())
+    onLoadFailed: root.cpuTemp = 0
+  }
+
   FileView {
     id: statFile
     path: "/proc/stat"
@@ -211,6 +280,7 @@ Item {
       if (root.detailed) {
         loadFile.reload()
         uptimeFile.reload()
+        if (root.tempPath !== "") tempFile.reload()
       }
     }
   }
@@ -223,6 +293,7 @@ Item {
       statFile.reload()
       loadFile.reload()
       uptimeFile.reload()
+      if (tempPath !== "") tempFile.reload()
     }
   }
 }
